@@ -1,0 +1,13 @@
+<?php
+$config = array(
+	'test.example.com' => array(
+		'email' => 'gdata@test.example.com',
+		'pass'  => 'G00D@t@'
+	),
+	'example.com' => array(
+		'email' => 'gtools@example.com',
+		'pass'  => 'G00D@t@'
+	),
+);
+?>
+

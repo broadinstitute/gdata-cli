@@ -1,0 +1,368 @@
+#!/usr/bin/env php
+<?php
+
+require 'config.php';
+require 'lib/setup.php';
+
+if (count($argv) == 1) {
+	errout($usage);
+	exit;
+}
+
+$authdomain = '';
+$method = '';
+$shortopts = "d:";
+$longopts = array();
+$options = getopt($shortopts, $longopts);
+if (!empty($options['d'])) {
+	$authdomain = $options['d'];
+	unset($argv[0]);
+	unset($argv[1]);
+	unset($argv[2]);
+	if (isset($argv[3])) {
+		$method = $argv[3];
+		unset($argv[3]);		
+	}
+} else {
+	$method = $argv[1];
+	unset($argv[0]);
+	unset($argv[1]);
+}
+$params = array_values($argv);
+
+if ($authdomain) {
+	if (!isset($config[$authdomain])) {
+		errout('Domain not listed in config. Check for spelling.');
+		exit;
+	}
+	extract($config[$authdomain]);
+} else {
+	foreach ($config as $k => $v) {
+		$authdomain = $k;
+		extract($v);
+		break;
+	}
+}
+
+try {
+	$google = new GoogleApps($authdomain, $email, $pass);
+} catch (Exception $e) {
+	print_r($e);
+	errout('Unable to authenticate. Please check config.php for credentials.');
+	exit;
+}
+
+try {
+	switch ($method) {
+		case 'user.pop':
+			extract(syntax('user.pop', $params));
+			$google->pop($user, $flag);
+			break;
+		case 'user.imap':
+			extract(syntax('user.imap', $params));
+			$google->imap($user, $flag);
+			break;
+		case 'user.aliases':
+			extract(syntax('user.aliases', $params));
+			$result = $google->userAliases($email);
+			out(implode("\n", $result));
+			break;
+		case 'user.webclip':
+			extract(syntax('user.webclip', $params));
+			$google->webclip($user, $flag);
+			break;
+		case 'user.info':
+			extract(syntax('user.info', $params));
+			if (preg_match('/@/', $user)) {
+				$user = preg_replace('/@.*/', '', $user);
+			}
+			$info = $google->userInfo($user);
+			$username = $user;
+			if (!$info) {
+				exit;
+			}
+			extract($info);
+			
+			$nicks = array();
+			foreach ($nick->entry as $n) {
+				$nicks[] = $n->nickname;
+			}
+			$nicks = implode(',', $nicks);
+			$aliases = $google->userAliases("$username@$authdomain");
+			
+			$output = "Name: {$user->name->givenName} {$user->name->familyName}\n";
+
+			if ($user->quota->limit) {
+				$output .= "Quota: {$user->quota->limit}\n";
+			} else {
+				$output .= "No quota.";
+			}
+			if ($aliases) {
+				#$output .= "Nicknames in $authdomain: $nicks\n";
+				$output .= "Aliases:\n";
+				$output .= "  " . implode("\n  ", $aliases);
+				$output .= "\n";
+			}
+			if ($user->login->admin) {
+				$output .= "User is an administrator.\n";
+			}
+			if ($user->login->suspended) {
+				$output .= "User is suspended.\n";
+			}
+			if ($user->login->changePasswordAtNextLogin) {
+				$output .= "User must change password at next login.\n";
+			}
+			if (!$user->login->agreedToTerms) {
+				$output .= "User has not agreed to terms.\n";
+			}
+			print $output;
+			break;
+		case 'user.list':
+			$list = implode("\n", $google->userList());
+			out($list);
+			break;
+		case 'user.create':
+			extract(syntax('user.create', $params));
+			$google->userCreate($user, $first, $last, $pass);
+			break;
+		case 'user.createAlias':
+			extract(syntax('user.createAlias', $params));
+			$google->userCreateAlias($email, $alias);
+			break;
+		case 'user.createNickname':
+			extract(syntax('user.createNickname', $params));
+			$google->userCreateNickname($user, $nickname);
+			break;
+		case 'user.delete':
+			extract(syntax('user.delete', $params));
+			$google->userDelete($user);
+			break;
+		case 'user.password':
+			extract(syntax('user.password', $params));
+			$google->userPassword($user, $password);
+			break;
+		case 'user.expire':
+			extract(syntax('user.expire', $params));
+			$google->userExpirePassword($user);
+			break;
+		case 'user.unexpire':
+			extract(syntax('user.unexpire', $params));
+			$google->userUnexpirePassword($user);
+			break;
+		case 'user.newEmail':
+			extract(syntax('user.newEmail', $params));
+			$google->userNewEmail($old_email, $new_email);
+			break;
+		case 'user.nicknames':
+			extract(syntax('user.nicknames', $params));
+			$result = $google->userNicknameList($user);
+			out(implode("\n", $result));
+			break;
+		case 'user.deleteAlias':
+			extract(syntax('user.deleteAlias', $params));
+			$google->userDeleteAlias($email, $alias);
+			break;
+		case 'user.deleteNickname':
+			extract(syntax('user.deleteNickname', $params));
+			$google->userDeleteNickname($nickname);
+			break;
+		case 'user.suspend':
+			list($user) = $params;
+			$google->userSuspend($user);
+			break;
+		case 'user.restore':
+			list($user) = $params;
+			$google->userRestore($user);
+			break;
+		case 'group.info':
+			extract(syntax('group.info', $params));
+			$group = $google->groupInfo($group_id);
+			$group_id = $group['groupId'];
+			$group_name = $group['groupName'];
+			$group_description = $group['description'];
+			$group_perm = $group['emailPermission'];
+			$info = "id: $group_id\n";
+			$info .= "name: $group_name\n";
+			$info .= "description: $group_description\n";
+			$info .= "permission: $group_perm\n";
+			$info .= "members: \n";
+			$info .= $google->groupMembers($group_id);
+			out($info);
+			break;
+		case 'group.list':
+			extract(syntax('group.list', $params));
+			$list = $google->groupList();
+			out(implode("\n", $list));
+			break;
+		case 'group.members':
+			extract(syntax('group.members', $params));
+			$members = $google->groupMembers($group_id);
+			out($members);
+			break;
+		case 'group.create':
+			extract(syntax('group.create', $params));
+			$google->groupCreate($id, $name, $description);
+			break;
+		case 'group.delete':
+			extract(syntax('group.delete', $params));
+			$google->groupDelete($group_id);
+			break;
+		case 'group.addMember':
+			extract(syntax('group.addMember', $params));
+			$google->groupAddMember($member_id, $group_id);
+			break;
+		case 'group.removeMember':
+			extract(syntax('group.removeMember', $params));
+			$google->groupRemoveMember($member_id, $group_id);
+			break;
+		case 'nickname.list':
+			extract(syntax('nickname.list', $params));
+			$list = $google->nicknameList();
+			foreach ($list as $item) {
+				$login = $item[0];
+				$nickname = $item[1];
+				out("$nickname@$authdomain: $login");
+			}
+			break;
+		case 'resource.list':
+			extract(syntax('resource.list', $params));
+			$list = $google->resourceList();
+			foreach ($list as $item) {
+				$name = $item['resourceCommonName'];
+				out("$name");
+			}
+			break;
+		case 'resource.listfull':
+			extract(syntax('resource.listfull', $params));
+			$list = $google->resourceList();
+			foreach ($list as $item) {
+				$name = $item['resourceCommonName'];
+				$email = $item['resourceEmail'];
+				$resid = $item['resourceId'];
+				if (isset($item['resourceDescription'])) {
+					$description = ' ('. $item['resourceDescription'] .')';
+				} else {
+					$description = "";
+				}
+				out("$name [$resid]: $email$description");
+			}
+			break;
+		case 'report.accounts':
+			extract(syntax('report.accounts', $params));
+			try {
+			  $rpt = $google->getReport('accounts', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'report.activity':
+			extract(syntax('report.activity', $params));
+			try {
+			  $rpt = $google->getReport('activity', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'report.disk_space':
+			extract(syntax('report.disk_space', $params));
+			try {
+			  $rpt = $google->getReport('disk_space', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'report.email_clients':
+			extract(syntax('report.email_clients', $params));
+			try {
+			  $rpt = $google->getReport('email_clients', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'report.quota_limit_accounts':
+			extract(syntax('report.quota_limit_accounts', $params));
+			try {
+			  $rpt = $google->getReport('quota_limit_accounts', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'report.summary':
+			extract(syntax('report.summary', $params));
+			try {
+			  $rpt = $google->getReport('summary', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'report.suspended_accounts':
+			extract(syntax('report.suspended_accounts', $params));
+			try {
+			  $rpt = $google->getReport('suspended_accounts', $reportdate);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			out("$rpt");
+			break;
+		case 'sites.list':
+		    $google = new GoogleApps($authdomain, $email, $pass, 'jotspot');
+			extract(syntax('sites.list', $params));
+			try {
+			  $list = $google->sitesList();
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			errout('Site Name|Last Updated|Theme|URL');
+			foreach ($list as $site) {
+				out("$site");
+			}
+
+			break;
+		case 'site.acls':
+		    $google = new GoogleApps($authdomain, $email, $pass, 'jotspot');
+			extract(syntax('site.acls', $params));
+			try {
+			  $list = $google->siteACL($sitename);
+			} catch (Exception $e) {
+			  errout($e->getMessage());
+			  break;
+			}
+			errout('Site Name|Last Updated|Scope|User/Domain|ACL');
+			foreach ($list as $acl) {
+				out("$acl");
+			}
+
+			break;
+		default:
+			errout($usage);
+			exit;
+	}
+} catch (Exception $e) {
+	print_r($e);exit;
+	$errors = $e->getErrors();
+	$message = $e->getMessage();
+	
+	$out[] = $message;
+	if ($errors) {
+		foreach ($errors as $e) {
+			$out[] = $e->getReason();
+		}
+	}
+	errout('ERROR: ' . implode('. ', $out));
+}
+
+?>
