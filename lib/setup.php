@@ -161,9 +161,9 @@ OPTIONS
 METHODS
 $desc
 	
-AUTHOR
-	Written by Jeff Loiselle <jeff@broadinstitute.org>
-
+AUTHORS
+	Jeff Loiselle <jeff@broadinstitute.org>
+	Andrew Teixeira <teixeira@broadinstitute.org>
 
 USAGE;
 
