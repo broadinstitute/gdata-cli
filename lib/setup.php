@@ -156,7 +156,7 @@ OPTIONS
 
 	The available options are as follows:
 	
-	-d	Google Apps domain name
+	-d   Google Apps domain name
 	
 METHODS
 $desc
