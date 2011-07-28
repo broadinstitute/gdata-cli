@@ -413,7 +413,7 @@ class GoogleApps {
 		$domain = $this->domain;
 		$uri = "https://apps-apis.google.com/a/feeds/calendar/resource/2.0/$domain/";
 		list($resources, $next) = $this->getResourcePage($uri);
-		while ($next) { 
+		while ($next) {
 			list($nextresources, $next) = $this->getResourcePage($next);
 			if (is_array($nextresources)) {
 				$resources = array_merge($resources, $nextresources);
