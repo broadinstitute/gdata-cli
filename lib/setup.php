@@ -156,14 +156,14 @@ OPTIONS
 
 	The available options are as follows:
 	
-	-d	Google Apps domain name
+	-d   Google Apps domain name
 	
 METHODS
 $desc
 	
-AUTHOR
-	Written by Jeff Loiselle <jeff@broadinstitute.org>
-
+AUTHORS
+	Jeff Loiselle <jeff@broadinstitute.org>
+	Andrew Teixeira <teixeira@broadinstitute.org>
 
 USAGE;
 
