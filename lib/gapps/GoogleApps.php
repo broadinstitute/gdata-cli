@@ -304,6 +304,9 @@ class GoogleApps {
 		}
 
 		$group = array();
+		if ($entry == null) {
+			return $group;
+		}
 		if (is_array($entry->property)) {
 		    foreach ($entry->property as $p) {
 			$group[$p->name] = $p->value;
@@ -332,6 +335,10 @@ class GoogleApps {
 	 * returns email addresses of group members
 	 */
 	function groupMembers($id) {
+		$entry = $this->service->retrieveGroup($id);
+		if ($entry == null) {
+			return array();
+		}
 		try {
 			$feed = $this->service->retrieveAllMembers($id);
 		} catch (Zend_Gdata_Gapps_ServiceException $e) {

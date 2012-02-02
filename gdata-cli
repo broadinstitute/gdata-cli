@@ -176,7 +176,17 @@ try {
 			break;
 		case 'group.info':
 			extract(syntax('group.info', $params));
-			$group = $google->groupInfo($group_id);
+			try {
+				$group = $google->groupInfo($group_id);
+			} catch (Exception $e) {
+				out("Group not found");
+				break;
+			}
+			if (!$group) {
+				$info = "Group not found.";
+				out($info);
+				break;
+			}
 			$group_id = $group['groupId'];
 			$group_name = $group['groupName'];
 			$group_description = $group['description'];
@@ -186,8 +196,11 @@ try {
 			$info .= "description: $group_description\n";
 			$info .= "permission: $group_perm\n";
 			$info .= "members: \n";
-			$info .= $google->groupMembers($group_id);
-			out($info);
+			$members = $google->groupMembers($group_id);
+			foreach ($members as $m) {
+				$info .= "\t$m\n";
+			}
+			out(rtrim($info));
 			break;
 		case 'group.list':
 			extract(syntax('group.list', $params));
@@ -196,8 +209,17 @@ try {
 			break;
 		case 'group.members':
 			extract(syntax('group.members', $params));
-			$members = $google->groupMembers($group_id);
-			out($members);
+			$info = '';
+			try {
+				$members = $google->groupMembers($group_id);
+			} catch (Exception $e) {
+				out($e->getMessage());
+				break;
+			}
+			foreach ($members as $m) {
+				$info .= "$m\n";
+			}
+			out(rtrim($info));
 			break;
 		case 'group.create':
 			extract(syntax('group.create', $params));
