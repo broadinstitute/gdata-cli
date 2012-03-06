@@ -347,11 +347,11 @@ class GoogleApps {
 		$users = array();
 		if (is_object($feed)) {
 		    foreach ($feed as $user) {
-			foreach ($user->property as $p) {
-				if ($p->name == 'memberId') {
-					$users[] = $p->value;
+				foreach ($user->property as $p) {
+					if ($p->name == 'memberId') {
+						$users[] = $p->value;
+					}
 				}
-			}
 		    }
 		}
 		return $users;
@@ -382,7 +382,7 @@ class GoogleApps {
 	}
 
 	/**
-	 * adds member to Google Group
+	 * adds a member to a Google Group
 	 */
 	function groupAddMember($email, $id) {
 		try {
@@ -394,11 +394,61 @@ class GoogleApps {
 	}
 
 	/**
-	 * removes a member from Google Group
+	 * removes a member from a Google Group
 	 */
 	function groupRemoveMember($user, $group_id) {
 		try {
 			$result = $this->service->removeMemberFromGroup($user, $group_id);
+		} catch (Zend_Gdata_Gapps_ServiceException $e) {
+			$this->catchZendGdataGappsServiceException($e);
+		}
+		return $result;
+	}
+
+	/**
+	 * returns email addresses of group owners
+	 */
+	function groupOwners($id) {
+		$entry = $this->service->retrieveGroup($id);
+		if ($entry == null) {
+			return array();
+		}
+		try {
+			$feed = $this->service->retrieveGroupOwners($id);
+		} catch (Zend_Gdata_Gapps_ServiceException $e) {
+			$this->catchZendGdataGappsServiceException($e);
+		}
+		$users = array();
+		if (is_object($feed)) {
+		    foreach ($feed as $user) {
+				foreach ($user->property as $p) {
+					if ($p->name == 'email') {
+						$users[] = $p->value;
+					}
+				}
+		    }
+		}
+		return $users;
+	}
+
+	/**
+	 * adds an owner to a Google Group
+	 */
+	function groupAddOwner($email, $id) {
+		try {
+			$result = $this->service->addOwnerToGroup($email, $id);
+		} catch (Zend_Gdata_Gapps_ServiceException $e) {
+			$this->catchZendGdataGappsServiceException($e);
+		}
+		return $result;
+	}
+
+	/**
+	 * removes an owner from a Google Group
+	 */
+	function groupRemoveOwner($user, $group_id) {
+		try {
+			$result = $this->service->removeOwnerFromGroup($user, $group_id);
 		} catch (Zend_Gdata_Gapps_ServiceException $e) {
 			$this->catchZendGdataGappsServiceException($e);
 		}

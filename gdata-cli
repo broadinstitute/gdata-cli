@@ -237,6 +237,28 @@ try {
 			extract(syntax('group.removeMember', $params));
 			$google->groupRemoveMember($member_id, $group_id);
 			break;
+		case 'group.addOwner':
+			extract(syntax('group.addOwner', $params));
+			$google->groupAddOwner($member_id, $group_id);
+			break;
+		case 'group.removeOwner':
+			extract(syntax('group.removeOwner', $params));
+			$google->groupRemoveOwner($member_id, $group_id);
+			break;
+		case 'group.owners':
+			extract(syntax('group.owners', $params));
+			$info = '';
+			try {
+				$owners = $google->groupOwners($group_id);
+			} catch (Exception $e) {
+				out($e->getMessage());
+				break;
+			}
+			foreach ($owners as $o) {
+				$info .= "$o\n";
+			}
+			out(rtrim($info));
+			break;
 		case 'nickname.list':
 			extract(syntax('nickname.list', $params));
 			$list = $google->nicknameList();

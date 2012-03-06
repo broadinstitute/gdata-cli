@@ -37,11 +37,18 @@ $syntax = array(
 	'group.removeMember' => array(
 		'argv' => array('member_id', 'group_id')
 	),
-
+	'group.addOwner' => array(
+		'argv' => array('member_id', 'group_id')
+	),
+	'group.removeOwner' => array(
+		'argv' => array('member_id', 'group_id')
+	),
+	'group.owners' => array(
+		'argv' => array('group_id')
+	),
 	'nickname.list' => array(
 		'argv' => array()
 	),
-
 	'resource.list' => array(
 		'argv' => array()
 	),
