@@ -259,6 +259,34 @@ try {
 			}
 			out(rtrim($info));
 			break;
+		case 'group.membership':
+			extract(syntax('group.membership', $params));
+			$info = '';
+			try {
+				$groups = $google->groupMembership($member_id);
+			} catch (Exception $e) {
+				out($e->getMessage());
+				break;
+			}
+			foreach ($groups as $g) {
+				$info .= "$g\n";
+			}
+			out(rtrim($info));
+			break;
+		case 'group.ownership':
+			extract(syntax('group.ownership', $params));
+			$info = '';
+			try {
+				$groups = $google->groupOwnership($member_id);
+			} catch (Exception $e) {
+				out($e->getMessage());
+				break;
+			}
+			foreach ($groups as $g) {
+				$info .= "$g\n";
+			}
+			out(rtrim($info));
+			break;
 		case 'nickname.list':
 			extract(syntax('nickname.list', $params));
 			$list = $google->nicknameList();

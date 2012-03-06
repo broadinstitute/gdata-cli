@@ -46,6 +46,12 @@ $syntax = array(
 	'group.owners' => array(
 		'argv' => array('group_id')
 	),
+	'group.membership' => array(
+		'argv' => array('member_id')
+	),
+	'group.ownership' => array(
+		'argv' => array('member_id')
+	),
 	'nickname.list' => array(
 		'argv' => array()
 	),

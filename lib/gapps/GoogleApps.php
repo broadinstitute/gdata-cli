@@ -456,6 +456,48 @@ class GoogleApps {
 	}
 
 	/**
+	 * returns the list of groups the provided user is a member of
+	 */
+	function groupMembership($user) {
+		try {
+			$feed = $this->service->retrieveGroups($user, true);
+		} catch (Zend_Gdata_Gapps_ServiceException $e) {
+			$this->catchZendGdataGappsServiceException($e);
+		}
+		$groups = array();
+		if (is_object($feed)) {
+		    foreach ($feed as $group) {
+				foreach ($group->property as $p) {
+					if ($p->name == 'groupId') {
+						$groups[] = $p->value;
+					}
+				}
+		    }
+		}
+		sort($groups);
+		return $groups;
+	}
+
+	/**
+	 * returns the list of groups the provided user is an owner of
+	 */
+	function groupOwnership($user) {
+		try {
+			$allGroups = $this->groupMembership($user);
+		} catch (Zend_Gdata_Gapps_ServiceException $e) {
+			$this->catchZendGdataGappsServiceException($e);
+		}
+
+		foreach ($allGroups as $group) {
+			if ($this->service->isOwner($user, $group)) {
+				$groups[] = $group;
+			}
+		}
+
+		return $groups;
+	}
+
+	/**
 	 * returns a list of resource calendars in a domain
 	 */
 	function resourceList() {
