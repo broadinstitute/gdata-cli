@@ -11,6 +11,7 @@ set_include_path($path);
 require 'functions.php';
 require 'gapps/GoogleApps.php';
 require 'gapps/Zend/Loader.php';
+Zend_Loader::loadClass('Zend_Uri_Http');
 Zend_Loader::loadClass('Zend_Gdata_ClientLogin');
 Zend_Loader::loadClass('Zend_Gdata_Gapps');
 

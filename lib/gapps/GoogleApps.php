@@ -5,11 +5,50 @@ class GoogleApps {
 	var $client;
 	var $service;
 	var $domain;
+	var $tokenfile = NULL;
+	var $glob = NULL;
 
 	function __construct($authdomain, $email, $password, $svcname = Zend_Gdata_Gapps::AUTH_SERVICE_NAME) {
 		$this->domain = $authdomain;
-		$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
+
+		// Fill in information about the token file
+		$tmpdir = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'tmp';
+		$this->tokenfile = $tmpdir . DIRECTORY_SEPARATOR . 'token-' . date('Y-m-d');
+		$this->glob = $tmpdir . DIRECTORY_SEPARATOR . 'token-*';
+
+		// Make the temporary directory if it doesn't exist, and throw an exception if it fails
+		if (!is_dir($tmpdir)) {
+			if (!mkdir($tmpdir)) {
+				throw new Exception("Cannot create token temporary directory.");
+			}
+		}
+
+		// Attempt to used the cached token if it exists
+		try {
+			if (file_exists($this->tokenfile)) {
+				$this->client = new Zend_Gdata_HttpClient();
+				$this->client->setClientLoginToken(file_get_contents($this->tokenfile));  
+			} else {
+				$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
+                $this->_removeTokenFiles();
+				file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
+			}
+		} catch (Exception $e) {
+			$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
+			$this->_removeTokenFiles();
+			file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
+		}
+
 		$this->service = new Zend_Gdata_Gapps($this->client, $authdomain);
+	}
+
+	function _removeTokenFiles() {
+		// Use the glob created in the constructor to remove all token files
+		if ($this->glob != NULL) {
+			foreach (glob($this->glob) as $g) {
+				unlink($g);
+			}
+		}
 	}
 
 	function catchZendGdataGappsServiceException($e) {
