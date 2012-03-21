@@ -21,6 +21,7 @@ class GoogleApps {
 			if (!mkdir($tmpdir)) {
 				throw new Exception("Cannot create token temporary directory.");
 			}
+			chmod($tmpdir, 0777);
 		}
 
 		// Attempt to used the cached token if it exists
@@ -32,11 +33,13 @@ class GoogleApps {
 				$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
                 $this->_removeTokenFiles();
 				file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
+				chmod($this->tokenfile, 0666);
 			}
 		} catch (Exception $e) {
 			$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
 			$this->_removeTokenFiles();
 			file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
+			chmod($this->tokenfile, 0666);
 		}
 
 		$this->service = new Zend_Gdata_Gapps($this->client, $authdomain);
