@@ -6,7 +6,9 @@ class GoogleApps {
 	var $service;
 	var $domain;
 	var $tokenfile = NULL;
+	var $sidtokenfile = NULL;
 	var $glob = NULL;
+	var $sidtoken = NULL;
 
 	function __construct($authdomain, $email, $password, $svcname = Zend_Gdata_Gapps::AUTH_SERVICE_NAME) {
 		$this->domain = $authdomain;
@@ -14,12 +16,13 @@ class GoogleApps {
 		// Fill in information about the token file
 		$tmpdir = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'tmp';
 		$this->tokenfile = $tmpdir . DIRECTORY_SEPARATOR . 'token-' . date('Y-m-d');
+		$this->sidtokenfile = $tmpdir . DIRECTORY_SEPARATOR . 'token-sid-' . date('Y-m-d');
 		$this->glob = $tmpdir . DIRECTORY_SEPARATOR . 'token-*';
 
 		// Make the temporary directory if it doesn't exist, and throw an exception if it fails
 		if (!is_dir($tmpdir)) {
 			if (!mkdir($tmpdir)) {
-				throw new Exception("Cannot create token temporary directory.");
+				throw new Exception('Cannot create token temporary directory.');
 			}
 			chmod($tmpdir, 0777);
 		}
@@ -28,21 +31,46 @@ class GoogleApps {
 		try {
 			if (file_exists($this->tokenfile)) {
 				$this->client = new Zend_Gdata_HttpClient();
-				$this->client->setClientLoginToken(file_get_contents($this->tokenfile));  
+				$this->client->setClientLoginToken(file_get_contents($this->tokenfile));
+				if (!file_exists($this->sidtokenfile)) {
+					throw new Exception('Could not retrieve SID token file. Delete all cached tokens and begin again.');
+				}
+				$this->sidtoken = file_get_contents($this->sidtokenfile);
 			} else {
-				$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
-                $this->_removeTokenFiles();
-				file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
-				chmod($this->tokenfile, 0666);
+				$this->_getClientToken($email, $password, $svcname);
 			}
 		} catch (Exception $e) {
-			$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
-			$this->_removeTokenFiles();
-			file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
-			chmod($this->tokenfile, 0666);
+			$this->_getClientToken($email, $password, $svcname);
 		}
 
 		$this->service = new Zend_Gdata_Gapps($this->client, $authdomain);
+	}
+
+	function _getClientToken($email, $password, $svcname) {
+		$this->client = Zend_Gdata_ClientLogin::getHttpClient($email, $password, $svcname);
+		$this->_removeTokenFiles();
+		file_put_contents($this->tokenfile, $this->client->getClientLoginToken());
+		chmod($this->tokenfile, 0666);
+
+		// Cache the SID token
+		$goog_resp = NULL;
+		$resp = $this->client->getLastResponse();
+		// This code shamelessly stolen from the Zend API
+		if ($resp->isSuccessful()) {
+			foreach (explode("\n", $resp->getBody()) as $l) {
+				$l = chop($l);
+				if ($l) {
+					list($key, $val) = explode('=', chop($l), 2);
+					$goog_resp[$key] = $val;
+				}
+			}
+		} else {
+            throw new Exception('SID token fetch failed. Reason: ' . $resp->getBody());
+		}
+
+		$this->sidtoken = $goog_resp['SID'];
+		file_put_contents($this->sidtokenfile, $this->sidtoken);
+		chmod($this->sidtokenfile, 0666);
 	}
 
 	function _removeTokenFiles() {
@@ -609,18 +637,7 @@ class GoogleApps {
 	  $rDomain = $this->domain;
 	  $rPage = 1;
 
-	  $goog_resp = NULL;
-	  $resp = $this->client->getLastResponse();
-	  // This loop shamelessly stolen from the Zend API
-	  foreach (explode("\n", $resp->getBody()) as $l) {
-            $l = chop($l);
-            if ($l) {
-                list($key, $val) = explode('=', chop($l), 2);
-                $goog_resp[$key] = $val;
-            }
-	  }
-
-	  $rToken = $goog_resp['SID'];
+	  $rToken = $this->sidtoken;
 
 	  $xml = '<?xml version="1.0" encoding="UTF-8"?>
 <rest xmlns="google:accounts:rest:protocol"
